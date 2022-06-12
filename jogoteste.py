@@ -1,7 +1,5 @@
 from math import floor
 from math import ceil
-from operator import invert
-from turtle import left
 import pygame
 from sys import exit
 from pygame.locals import *
@@ -33,22 +31,6 @@ def import_and_fill_display(location):
     return surface
 
 
-def update_adventurer(adventurer, adventurer_state, action):
-    if(adventurer_state == 1):
-        adventurer = import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4)
-    if(adventurer_state == 2):
-        adventurer = import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4)
-    if(adventurer_state == 3):
-        adventurer = import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4)
-    if(adventurer_state == 4):
-        adventurer = import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4)
-    return adventurer
-
-
 def fit_to_rectangle(bounding_rec, margins):
     return bounding_rec.left+margins[0], bounding_rec.top+margins[1]
 
@@ -71,13 +53,46 @@ def invert_margins(margins):
     return new_margins
 
 
+def import_action(action, n_sprites):
+
+    if n_sprites == 4:
+        return(import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4))
+    if n_sprites == 5:
+        return(import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', 4))
+    if n_sprites == 6:
+        return(import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', 4), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-05.png', 4))
+
+
 pygame.init()
+
 
 # Setando a tela, fonte, nome da janela e escala de aumento de acordo com a resolução
 screen = pygame.display.set_mode(size)
 text_font = pygame.font.Font('fonts/Pixeltype.ttf', 50)
 pygame.display.set_caption("Adventurer")
 game_scale = ceil(scr_w/320)
+
+adventurer_idle2 = import_action('idle-2', 4)
+adventurer_run = import_action('run', 6)
+adventurer_jump = import_action('jump',4)
+adventurer_fall = import_action('fall',4)
+
+print(adventurer_idle2)
 
 # Inicia relógio para controlar framerate
 clock = pygame.time.Clock()
@@ -88,13 +103,13 @@ ground = import_and_extend_to_display('graphics/ground.png')
 ground_y = ceil(55*scr_h/72)
 score = 0
 score_surface = text_font.render('Score:   '+str(score), False, 'Red')
-score_rect = score_surface.get_rect(
-    centerx=screen.get_rect().centerx, centery=40)
+score_rect = score_surface.get_rect(center=(scr_w/2, 50))
 
+# Construindo hitboxes
 adventurer = import_and_resize(
-    'graphics/Adventurer/Individual Sprites/adventurer-rectangle.png', 4)
+    'graphics/Adventurer/Individual Sprites/adventurer-rectangle.png', game_scale)
 
-adventurer_x = screen.get_rect().center[0]
+adventurer_x = scr_w/2
 adventurer_unbound_rec = adventurer.get_rect(
     midbottom=(adventurer_x, ground_y))
 adventurer_rec = adventurer.get_bounding_rect()
@@ -107,8 +122,8 @@ enemy_x = scr_w - enemy_surface.get_size()[0]
 enemy_rec = enemy_surface.get_rect(midbottom=(enemy_x, ground_y))
 
 
-adventurer_state = 1
-adventurer_action = 'idle-2'
+adventurer_state = 0
+adventurer_action = adventurer_idle2
 inverted_margins = invert_margins(margins_adventurer)
 
 player_speed = 0
@@ -117,6 +132,7 @@ falling = False
 last_x, last_y, last_direction = adventurer_rec.centerx, adventurer_rec.centery, 'right'
 
 while True:
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -124,35 +140,35 @@ while True:
         if event.type == pygame.KEYDOWN:
             if (event.key == pygame.K_SPACE and adventurer_rec.bottom >= ground_y):
                 player_gravity = -25
-                adventurer_action = 'jump'
+                adventurer_action = adventurer_jump
                 falling = True
             if (event.key == pygame.K_s and adventurer_rec.bottom < ground_y):
                 player_gravity += 5
             if (event.key == pygame.K_d):
                 print('RIGHT')
                 player_speed += 10
-                adventurer_action = 'run'
+                adventurer_action = adventurer_run
             if (event.key == pygame.K_a):
                 print('LEFT')
                 player_speed -= 10
-                adventurer_action = 'run'
+                adventurer_action = adventurer_run
         if event.type == pygame.KEYUP:
             if (event.key == pygame.K_d):
                 print('K UP RIGHT')
                 player_speed -= 10
-                adventurer_action = 'run'
+                adventurer_action = adventurer_run
             if (event.key == pygame.K_a):
                 player_speed += 10
-                adventurer_action = 'run'
+                adventurer_action = adventurer_run
 
-    adventurer = update_adventurer(adventurer, ceil(adventurer_state), adventurer_action)
-    if (last_direction == 'left'):
-        adventurer = pygame.transform.flip(adventurer,True,False)
-    
-    if(adventurer_state < 4):
+    if(adventurer_state < len(adventurer_action)-1):
         adventurer_state += 1/10
     else:
         adventurer_state = 0
+    
+    adventurer = adventurer_action[floor(adventurer_state)]
+    if (last_direction == 'left'):
+        adventurer = pygame.transform.flip(adventurer, True, False)
 
     screen.blit(sky, (0, 0))
     screen.blit(ground, (0, ground_y))
@@ -178,16 +194,16 @@ while True:
     current_x, current_y = adventurer_rec.centerx, adventurer_rec.centery
 
     if(current_x == last_x and current_y == last_y):
-        adventurer_action = 'idle-2'
+        adventurer_action = adventurer_idle2
     if(current_y > last_y):
-        adventurer_action = 'fall'
+        adventurer_action = adventurer_fall
     if(current_x == last_x):
         current_direction = last_direction
     if(current_x > last_x):
-        current_direction = 'right';
+        current_direction = 'right'
         print('right')
     if(current_x < last_x):
-        current_direction = 'left';
+        current_direction = 'left'
         print('left')
 
     last_x, last_y, last_direction = current_x, current_y, current_direction
