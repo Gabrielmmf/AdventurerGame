@@ -53,29 +53,29 @@ def invert_margins(margins):
     return new_margins
 
 
-def import_action(action, n_sprites):
+def import_action(action, n_sprites, scale):
 
     if n_sprites == 4:
         return(import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4))
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', scale))
     if n_sprites == 5:
         return(import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', 4))
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', scale))
     if n_sprites == 6:
         return(import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', 4), import_and_resize(
-            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-05.png', 4))
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-00.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-01.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-02.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-03.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-04.png', scale), import_and_resize(
+            'graphics/Adventurer/Individual Sprites/adventurer-'+action+'-05.png', scale))
 
 
 pygame.init()
@@ -87,14 +87,14 @@ text_font = pygame.font.Font('fonts/Pixeltype.ttf', 50)
 pygame.display.set_caption("Adventurer")
 game_scale = ceil(scr_w/320)
 
-adventurer_idle2 = import_action('idle-2', 4)
-adventurer_run = import_action('run', 6)
-adventurer_jump = import_action('jump', 4)
-adventurer_fall = import_action('fall', 4)
-adventurer_attack1 = import_action('attack1', 5)
-adventurer_attack2 = import_action('attack2', 6)
-adventurer_attack3 = import_action('attack3', 6)
-adventurer_air_attack1 = import_action('air-attack1', 4)
+adventurer_idle2 = import_action('idle-2', 4, game_scale)
+adventurer_run = import_action('run', 6, game_scale)
+adventurer_jump = import_action('jump', 4, game_scale)
+adventurer_fall = import_action('fall', 4, game_scale)
+adventurer_attack1 = import_action('attack1', 5, game_scale)
+adventurer_attack2 = import_action('attack2', 6, game_scale)
+adventurer_attack3 = import_action('attack3', 6, game_scale)
+adventurer_air_attack1 = import_action('air-attack1', 4, game_scale)
 
 print(adventurer_idle2)
 
@@ -121,7 +121,8 @@ adventurer_rec.move_ip(adventurer_unbound_rec.topleft)
 # margins left, top, rigth, bottom
 margins_adventurer = find_margins(adventurer_rec, adventurer_unbound_rec)
 
-enemy_surface = import_and_resize('graphics/Enemies/1.png', 2)
+enemy_surface = import_and_resize(
+    'graphics/Enemies/1.png', floor(game_scale/2))
 enemy_x = scr_w - enemy_surface.get_size()[0]
 enemy_rec = enemy_surface.get_rect(midbottom=(enemy_x, ground_y))
 
@@ -132,9 +133,16 @@ adventurer_action = adventurer_idle2
 player_speed = 0
 player_gravity = 0
 falling = False
-last_x, last_y, last_direction = adventurer_rec.centerx, adventurer_rec.centery, 'right'
 ininterrupt = False
-endofininterrupt = False
+falling_action = False
+attacking = False
+hitting = True
+frames_delay = 1
+dash_state = 0
+player_dash = 0
+
+last_x, last_y, direction = adventurer_rec.centerx, adventurer_rec.centery, 'right'
+
 
 while True:
 
@@ -142,51 +150,83 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-        if event.type == pygame.KEYDOWN:
-            if (event.key == pygame.K_SPACE and adventurer_rec.bottom >= ground_y and not (ininterrupt)):
-                player_gravity = -25
+
+        if event.type == pygame.KEYDOWN and not (ininterrupt):
+            if (event.key == pygame.K_SPACE and adventurer_rec.bottom >= ground_y):
+                player_gravity = -25*floor(game_scale/4)
                 adventurer_action = adventurer_jump
                 falling = True
-            if (event.key == pygame.K_s and adventurer_rec.bottom < ground_y and not (ininterrupt)):
-                player_gravity += 5
-            if (event.key == pygame.K_d and not (ininterrupt)):
-                print('RIGHT')
-                player_speed += 10
-                if not(ininterrupt):
-                    adventurer_action = adventurer_run
-            if (event.key == pygame.K_a and not (ininterrupt)):
-                print('LEFT')
-                player_speed -= 10
-                if not(ininterrupt):
-                    adventurer_action = adventurer_run
-            if (event.key == pygame.K_j and not (ininterrupt)):
+
+            if (event.key == pygame.K_s and adventurer_rec.bottom < ground_y):
+                player_gravity += 5*floor(game_scale/4)
+
+            if (event.key == pygame.K_j):
                 print('ATTACK 1')
-                adventurer_action = adventurer_attack1
-                player_speed = 0
+
+                if (falling):
+                    adventurer_action = adventurer_air_attack1
+                    falling_action = True
+                    frames_delay = 1
+
+                else:
+                    adventurer_action = adventurer_attack1
+                    frames_delay = 2
+                attacking = True
                 ininterrupt = True
+                adventurer_state = 0
+            if (event.key == pygame.K_l):
+                if(direction == 'left'):
+                    player_dash = -30*floor(game_scale/4)
+                else:
+                    player_dash = 30*floor(game_scale/4)
+                dash_state = 0
 
-        if event.type == pygame.KEYUP:
-            if (event.key == pygame.K_d):
-                print('K UP RIGHT')
-                player_speed = 0
-                if(pygame.key.get_pressed()[K_a]):
-                    player_speed = -10
-                
-            if (event.key == pygame.K_a):
-                player_speed = 0
-                if(pygame.key.get_pressed()[K_d]):
-                    player_speed = 10
-                
+    if pygame.key.get_pressed()[K_a] and not(ininterrupt):
 
-    if(adventurer_state < len(adventurer_action)-1):
-        adventurer_state += 1/10
+        if falling:
+            adventurer_rec.x -= 8*floor(game_scale/4)
+            player_speed = -8*floor(game_scale/4)
+
+        else:
+            adventurer_rec.x -= 10*floor(game_scale/4)
+
+    if pygame.key.get_pressed()[K_d] and not(ininterrupt):
+
+        if falling:
+            adventurer_rec.x += 8*floor(game_scale/4)
+            player_speed = 8*floor(game_scale/4)
+
+        else:
+            adventurer_rec.x += 10*floor(game_scale/4)
+
+    if pygame.key.get_pressed()[K_d] and pygame.key.get_pressed()[K_a]:
+        player_speed = 0
+
+    if not(pygame.key.get_pressed()[K_d]) and not(pygame.key.get_pressed()[K_a]):
+        player_speed = 0
+
+    # Lógica para saber se está ocorrendo um hit
+    if(adventurer_state >= frames_delay and adventurer_state < len(adventurer_action) and attacking):
+        hitting = True
     else:
+        hitting = False
+
+    # Atualziando o dash
+    if(dash_state >= 5):
+        player_dash = 0
+    dash_state += 1
+
+    # Atualizando sprites do adventurer
+    if(adventurer_state >= len(adventurer_action)):
         ininterrupt = False
-        endofininterrupt = True
         adventurer_state = 0
+        falling_action = False
+        attacking = False
 
     adventurer = adventurer_action[floor(adventurer_state)]
-    if (last_direction == 'left'):
+    adventurer_state += 1/10
+
+    if (direction == 'left'):
         adventurer = pygame.transform.flip(adventurer, True, False)
 
     screen.blit(sky, (0, 0))
@@ -197,20 +237,36 @@ while True:
     enemy_rec.x -= 6
     if (enemy_rec.right <= 0):
         enemy_rec.left = scr_w
-    adventurer_rec.x += player_speed
+
+    if (falling_action):
+        adventurer_rec.x += player_speed
+    
+    adventurer_rec.x += player_dash
 
     attack_hitbox = add_margins(adventurer_rec, margins_adventurer)
-    pygame.draw.rect(screen, (0, 0, 0, 0.3), attack_hitbox)
-    pygame.draw.rect(screen, (245, 0, 0, 0.3), adventurer_rec)
 
+    if hitting:
+        if(direction == 'right' and enemy_rec.collidepoint(attack_hitbox.midright)):
+            score += 1
+            enemy_rec.left = scr_w
+        if(direction == 'left' and enemy_rec.collidepoint(attack_hitbox.midleft)):
+            score += 1
+            enemy_rec.left = scr_w
+        #pygame.draw.rect(screen, (250, 0, 0, 0.3), attack_hitbox)
+    # else:
+        #pygame.draw.rect(screen, (0, 0, 0, 0.3), attack_hitbox)
+    #pygame.draw.rect(screen, (0, 250, 0, 0.3), adventurer_rec)
+
+    score_surface = text_font.render('Score:   '+str(score), False, 'Red')
 
     if(adventurer_rec.bottom < ground_y):
-        player_gravity += 1
+        player_gravity += 1*floor(game_scale/4)
     adventurer_rec.centery += player_gravity
 
     if adventurer_rec.bottom > ground_y:
         adventurer_rec.bottom = ground_y
         falling = False
+        falling_action = False
 
     current_x, current_y = adventurer_rec.centerx, adventurer_rec.centery
 
@@ -220,19 +276,20 @@ while True:
         if(current_y > last_y):
             adventurer_action = adventurer_fall
         if(current_x == last_x):
-            current_direction = last_direction
+            current_direction = direction
         if(current_x > last_x):
             current_direction = 'right'
-            if not(falling and not(ininterrupt)):
+            if not(falling):
                 adventurer_action = adventurer_run
                 print('right')
         if(current_x < last_x):
             current_direction = 'left'
             print('left')
-            if not(falling and not(ininterrupt)):
+            if not(falling):
                 adventurer_action = adventurer_run
 
-    last_x, last_y, last_direction = current_x, current_y, current_direction
+    last_x, last_y, direction = current_x, current_y, current_direction
+
     screen.blit(adventurer, fit_to_rectangle(
         adventurer_rec, margins_adventurer))
 
