@@ -89,8 +89,12 @@ game_scale = ceil(scr_w/320)
 
 adventurer_idle2 = import_action('idle-2', 4)
 adventurer_run = import_action('run', 6)
-adventurer_jump = import_action('jump',4)
-adventurer_fall = import_action('fall',4)
+adventurer_jump = import_action('jump', 4)
+adventurer_fall = import_action('fall', 4)
+adventurer_attack1 = import_action('attack1', 5)
+adventurer_attack2 = import_action('attack2', 6)
+adventurer_attack3 = import_action('attack3', 6)
+adventurer_air_attack1 = import_action('air-attack1', 4)
 
 print(adventurer_idle2)
 
@@ -124,48 +128,63 @@ enemy_rec = enemy_surface.get_rect(midbottom=(enemy_x, ground_y))
 
 adventurer_state = 0
 adventurer_action = adventurer_idle2
-inverted_margins = invert_margins(margins_adventurer)
 
 player_speed = 0
 player_gravity = 0
 falling = False
 last_x, last_y, last_direction = adventurer_rec.centerx, adventurer_rec.centery, 'right'
+ininterrupt = False
+endofininterrupt = False
 
 while True:
-    
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
         if event.type == pygame.KEYDOWN:
-            if (event.key == pygame.K_SPACE and adventurer_rec.bottom >= ground_y):
+            if (event.key == pygame.K_SPACE and adventurer_rec.bottom >= ground_y and not (ininterrupt)):
                 player_gravity = -25
                 adventurer_action = adventurer_jump
                 falling = True
-            if (event.key == pygame.K_s and adventurer_rec.bottom < ground_y):
+            if (event.key == pygame.K_s and adventurer_rec.bottom < ground_y and not (ininterrupt)):
                 player_gravity += 5
-            if (event.key == pygame.K_d):
+            if (event.key == pygame.K_d and not (ininterrupt)):
                 print('RIGHT')
                 player_speed += 10
-                adventurer_action = adventurer_run
-            if (event.key == pygame.K_a):
+                if not(ininterrupt):
+                    adventurer_action = adventurer_run
+            if (event.key == pygame.K_a and not (ininterrupt)):
                 print('LEFT')
                 player_speed -= 10
-                adventurer_action = adventurer_run
+                if not(ininterrupt):
+                    adventurer_action = adventurer_run
+            if (event.key == pygame.K_j and not (ininterrupt)):
+                print('ATTACK 1')
+                adventurer_action = adventurer_attack1
+                player_speed = 0
+                ininterrupt = True
+
         if event.type == pygame.KEYUP:
             if (event.key == pygame.K_d):
                 print('K UP RIGHT')
-                player_speed -= 10
-                adventurer_action = adventurer_run
+                player_speed = 0
+                if(pygame.key.get_pressed()[K_a]):
+                    player_speed = -10
+                
             if (event.key == pygame.K_a):
-                player_speed += 10
-                adventurer_action = adventurer_run
+                player_speed = 0
+                if(pygame.key.get_pressed()[K_d]):
+                    player_speed = 10
+                
 
     if(adventurer_state < len(adventurer_action)-1):
         adventurer_state += 1/10
     else:
+        ininterrupt = False
+        endofininterrupt = True
         adventurer_state = 0
-    
+
     adventurer = adventurer_action[floor(adventurer_state)]
     if (last_direction == 'left'):
         adventurer = pygame.transform.flip(adventurer, True, False)
@@ -175,7 +194,7 @@ while True:
     screen.blit(enemy_surface, enemy_rec)
     screen.blit(score_surface, score_rect)
 
-    enemy_rec.x -= 2
+    enemy_rec.x -= 6
     if (enemy_rec.right <= 0):
         enemy_rec.left = scr_w
     adventurer_rec.x += player_speed
@@ -183,6 +202,8 @@ while True:
     attack_hitbox = add_margins(adventurer_rec, margins_adventurer)
     pygame.draw.rect(screen, (0, 0, 0, 0.3), attack_hitbox)
     pygame.draw.rect(screen, (245, 0, 0, 0.3), adventurer_rec)
+
+
     if(adventurer_rec.bottom < ground_y):
         player_gravity += 1
     adventurer_rec.centery += player_gravity
@@ -193,18 +214,23 @@ while True:
 
     current_x, current_y = adventurer_rec.centerx, adventurer_rec.centery
 
-    if(current_x == last_x and current_y == last_y):
-        adventurer_action = adventurer_idle2
-    if(current_y > last_y):
-        adventurer_action = adventurer_fall
-    if(current_x == last_x):
-        current_direction = last_direction
-    if(current_x > last_x):
-        current_direction = 'right'
-        print('right')
-    if(current_x < last_x):
-        current_direction = 'left'
-        print('left')
+    if not(ininterrupt):
+        if(current_x == last_x and current_y == last_y):
+            adventurer_action = adventurer_idle2
+        if(current_y > last_y):
+            adventurer_action = adventurer_fall
+        if(current_x == last_x):
+            current_direction = last_direction
+        if(current_x > last_x):
+            current_direction = 'right'
+            if not(falling and not(ininterrupt)):
+                adventurer_action = adventurer_run
+                print('right')
+        if(current_x < last_x):
+            current_direction = 'left'
+            print('left')
+            if not(falling and not(ininterrupt)):
+                adventurer_action = adventurer_run
 
     last_x, last_y, last_direction = current_x, current_y, current_direction
     screen.blit(adventurer, fit_to_rectangle(
